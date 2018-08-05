@@ -1,0 +1,9 @@
+embeddings {
+  tensor_name: "embedding:0"
+  metadata_path: "E:\\ML\\DeepL\\TensorFLow-Learning\\projector/projector/metadata.tsv"
+  sprite {
+    image_path: "E:\\ML\\DeepL\\TensorFLow-Learning\\projector/data/mnist_10k_sprite.png"
+    single_image_dim: 28
+    single_image_dim: 28
+  }
+}

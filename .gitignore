@@ -2,3 +2,5 @@
 **/.ipynb_checkpoints/*
 */.idea/*
 .ipynb_checkpoints/*
+inception_model/*
+logs/inception_log/*

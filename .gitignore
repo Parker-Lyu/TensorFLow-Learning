@@ -6,3 +6,4 @@ inception_model/*
 logs/inception_log/*
 cifar-10-python.tar.gz
 cifar-10-batches-py/*
+captcha/*

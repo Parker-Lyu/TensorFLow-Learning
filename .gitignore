@@ -9,3 +9,4 @@ cifar-10-batches-py/*
 captcha/*
 slim/*
 .idea/*
+nets/__pycache__/*

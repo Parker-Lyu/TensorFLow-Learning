@@ -37,7 +37,7 @@ from nets.nasnet import pnasnet
 slim = tf.contrib.slim
 
 networks_map = {'alexnet_v2': alexnet.alexnet_v2,
-				'alexnet_v2_captcha_multi': alexnet.alexnet_v2_captcha_multi,
+				# 'alexnet_v2_captcha_multi': alexnet.alexnet_v2_captcha_multi,
 				# 'alexnet_v2_captcha_single': alexnet.alexnet_v2_captcha_single,
                 'cifarnet': cifarnet.cifarnet,
                 'overfeat': overfeat.overfeat,
@@ -73,7 +73,7 @@ networks_map = {'alexnet_v2': alexnet.alexnet_v2,
                }
 
 arg_scopes_map = {'alexnet_v2': alexnet.alexnet_v2_arg_scope,
-				  'alexnet_v2_captcha_multi': alexnet.alexnet_v2_arg_scope,
+				  # 'alexnet_v2_captcha_multi': alexnet.alexnet_v2_arg_scope,
 				  # 'alexnet_v2_captcha_single': alexnet.alexnet_v2_arg_scope,
                   'cifarnet': cifarnet.cifarnet_arg_scope,
                   'overfeat': overfeat.overfeat_arg_scope,

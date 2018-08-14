@@ -24,7 +24,7 @@ EPOCHES = 30
 LOOP_TIMES = EPOCHES*TRAIN_NUM//BATCH_SIZE
 # tf文件
 TFRECORD_FILE = 'captcha/train.tfrecord'
-TFRECORD_FILE_TEST = 'captcha/test.tfrecord'
+# TFRECORD_FILE_TEST = 'captcha/test.tfrecord'
 # 初始学习率
 LEARNING_RATE = 0.001
 
@@ -43,9 +43,9 @@ def read_and_decode(filename):
                                        })
     image = tf.decode_raw(features['image'], tf.uint8)
     image = tf.reshape(image,[224,224])
-    image = (tf.cast(image,tf.float32)/225.0 - 0.5) * 2
-    # image = tf.subtract(image,0.5)
-    # image = tf.multiply(image, 2)
+    image = tf.cast(image, tf.float32) / 255.0
+    image = tf.subtract(image, 0.5)
+    image = tf.multiply(image, 2.0)
 
     label0 = tf.cast(features['label0'], tf.int32)
     label1 = tf.cast(features['label1'], tf.int32)
@@ -63,15 +63,6 @@ image_batch, label0_batch, label1_batch, label2_batch, label3_batch = tf.train.s
     num_threads=1
 )
 
-test_image, test_label0, test_label1, test_label2, test_label3 = read_and_decode(TFRECORD_FILE_TEST)
-
-test_image_batch, test_label0_batch, test_label1_batch, test_label2_batch, test_label3_batch = tf.train.shuffle_batch(
-    [test_image, test_label0, test_label1, test_label2, test_label3],
-    batch_size=BATCH_SIZE,
-    capacity=3000,
-    min_after_dequeue=800,
-    num_threads=1
-)
 
 # 定义网络结构
 train_network_fn = nets_factory.get_network_fn(
@@ -102,20 +93,20 @@ loss1 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_la
 loss2 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label2,logits=logits2))
 loss3 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label3,logits=logits3))
 
-total_loss = (loss0 + loss1 + loss2 + loss3)/4
-optimizer = tf.train.AdamOptimizer(lr).minimize(total_loss)
+total_loss = (loss0 + loss1 + loss2 + loss3)/4.0
+optimizer = tf.train.AdamOptimizer(learning_rate=lr).minimize(total_loss)
 
 # 计算准确率
-correct_pre0 = tf.equal(tf.cast(y0,tf.int64), tf.argmax(logits0,1))
+correct_pre0 = tf.equal(tf.argmax(one_hot_label0, 1), tf.argmax(logits0, 1))
 accuracy0 = tf.reduce_mean(tf.cast(correct_pre0, tf.float32))
 
-correct_pre1 = tf.equal(tf.cast(y1,tf.int64), tf.argmax(logits1,1))
+correct_pre1 = tf.equal(tf.argmax(one_hot_label1, 1), tf.argmax(logits1, 1))
 accuracy1 = tf.reduce_mean(tf.cast(correct_pre1, tf.float32))
 
-correct_pre2 = tf.equal(tf.cast(y2,tf.int64), tf.argmax(logits2,1))
+correct_pre2 = tf.equal(tf.argmax(one_hot_label2, 1), tf.argmax(logits2, 1))
 accuracy2 = tf.reduce_mean(tf.cast(correct_pre2, tf.float32))
 
-correct_pre3 = tf.equal(tf.cast(y3,tf.int64), tf.argmax(logits3,1))
+correct_pre3 = tf.equal(tf.argmax(one_hot_label3, 1), tf.argmax(logits3, 1))
 accuracy3 = tf.reduce_mean(tf.cast(correct_pre3, tf.float32))
 
 saver = tf.train.Saver()
@@ -124,7 +115,7 @@ saver = tf.train.Saver()
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(coord=coord)
+    threads = tf.train.start_queue_runners(sess=sess,coord=coord)
 
     i_epoch = 0
 
@@ -143,19 +134,17 @@ with tf.Session() as sess:
                 sess.run(tf.assign(lr,lr*0.5))
 
         if i%20 == 0:
-            b_image_, b_label0_, b_label1_, b_label2_, b_label3_ = sess.run(
-                [test_image_batch, test_label0_batch, test_label1_batch, test_label2_batch, test_label3_batch])
             acc0, acc1, acc2, acc3, loss_ = sess.run([accuracy0, accuracy1,accuracy2, accuracy3,total_loss],
-                                                     feed_dict={x:b_image_,
-                                                                y0:b_label0_,
-                                                                y1:b_label1_,
-                                                                y2:b_label2_,
-                                                                y3:b_label3_})
+                                                     feed_dict={x:b_image,
+                                                               y0:b_label0,
+                                                               y1:b_label1,
+                                                               y2:b_label2,
+                                                               y3:b_label3})
             learning_rate = sess.run(lr)
             print("Iter:%d/%d epoch:%d,  Loss:%.3f  Accuracy:%.2f,%.2f,%.2f,%.2f  Learning_rate:%.5f" % (
                 i, LOOP_TIMES, i_epoch, loss_, acc0, acc1, acc2, acc3, learning_rate))
             if acc0>0.9 and acc1>0.9 and acc2>0.9 and acc3>0.9:
-                saver.save(sess,'captchar/model/crack_captcha.model',global_step=i)
+                saver.save(sess,'captcha/model/crack_captcha.model',global_step=i)
 
     coord.request_stop()
     coord.join(threads)

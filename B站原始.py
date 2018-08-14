@@ -1,6 +1,8 @@
-# !/user/bin/env python
-# -*- coding:utf-8 -*-
-# author:Parker   time: 2018/8/13
+# -*- coding: utf-8 -*-
+# @Time    : 2018/8/14 11:18
+# @Author  : Parker
+# @File    : B站原始.py
+# @Software: PyCharm
 
 
 import os
@@ -9,6 +11,7 @@ from PIL import Image
 from nets import nets_factory
 import numpy as np
 
+# In[2]:
 
 # 不同字符数量
 CHAR_SET_LEN = 10
@@ -19,7 +22,7 @@ IMAGE_WIDTH = 160
 # 批次
 BATCH_SIZE = 25
 # tfrecord文件存放路径
-TFRECORD_FILE = 'captcha/train.tfrecord'
+TFRECORD_FILE = "captcha/train.tfrecord"
 
 # placeholder
 x = tf.placeholder(tf.float32, [None, 224, 224])
@@ -64,13 +67,15 @@ def read_and_decode(filename):
     return image, label0, label1, label2, label3
 
 
+# In[3]:
+
 # 获取图片数据和标签
 image, label0, label1, label2, label3 = read_and_decode(TFRECORD_FILE)
 
 # 使用shuffle_batch可以随机打乱
 image_batch, label_batch0, label_batch1, label_batch2, label_batch3 = tf.train.shuffle_batch(
     [image, label0, label1, label2, label3], batch_size=BATCH_SIZE,
-    capacity=50000, min_after_dequeue=10000, num_threads=1)
+    capacity=3000, min_after_dequeue=800, num_threads=1)
 
 # 定义网络结构
 train_network_fn = nets_factory.get_network_fn(
@@ -143,9 +148,8 @@ with tf.Session() as sess:
                                                                 y2: b_label2,
                                                                 y3: b_label3})
             learning_rate = sess.run(lr)
-            i_epoch = i//(5800/BATCH_SIZE) + 1
-            print("Iter:%d epoch:%d,  Loss:%.3f  Accuracy:%.2f,%.2f,%.2f,%.2f  Learning_rate:%.4f" % (
-            i,i_epoch, loss_, acc0, acc1, acc2, acc3, learning_rate))
+            print("Iter:%d  Loss:%.3f  Accuracy:%.2f,%.2f,%.2f,%.2f  Learning_rate:%.4f" % (
+            i, loss_, acc0, acc1, acc2, acc3, learning_rate))
 
             # 保存模型
             # if acc0 > 0.90 and acc1 > 0.90 and acc2 > 0.90 and acc3 > 0.90:
@@ -158,7 +162,10 @@ with tf.Session() as sess:
     # 其他所有线程关闭之后，这一函数才能返回
     coord.join(threads)
 
+# In[ ]:
 
+
+# In[ ]:
 
 
 

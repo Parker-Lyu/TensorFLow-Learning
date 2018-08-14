@@ -9,7 +9,6 @@ from PIL import Image
 from nets import nets_factory
 import numpy as np
 
-# In[2]:
 
 # 不同字符数量
 CHAR_SET_LEN = 10
@@ -65,8 +64,6 @@ def read_and_decode(filename):
     return image, label0, label1, label2, label3
 
 
-# In[3]:
-
 # 获取图片数据和标签
 image, label0, label1, label2, label3 = read_and_decode(TFRECORD_FILE)
 
@@ -77,7 +74,7 @@ image_batch, label_batch0, label_batch1, label_batch2, label_batch3 = tf.train.s
 
 # 定义网络结构
 train_network_fn = nets_factory.get_network_fn(
-    'alexnet_v2',
+    'alexnet_v2_captcha_multi',
     num_classes=CHAR_SET_LEN,
     weight_decay=0.0005,
     is_training=True)
@@ -146,8 +143,9 @@ with tf.Session() as sess:
                                                                 y2: b_label2,
                                                                 y3: b_label3})
             learning_rate = sess.run(lr)
-            print("Iter:%d  Loss:%.3f  Accuracy:%.2f,%.2f,%.2f,%.2f  Learning_rate:%.4f" % (
-            i, loss_, acc0, acc1, acc2, acc3, learning_rate))
+            i_epoch = i//(5800/BATCH_SIZE) + 1
+            print("Iter:%d epoch:%d,  Loss:%.3f  Accuracy:%.2f,%.2f,%.2f,%.2f  Learning_rate:%.4f" % (
+            i,i_epoch, loss_, acc0, acc1, acc2, acc3, learning_rate))
 
             # 保存模型
             # if acc0 > 0.90 and acc1 > 0.90 and acc2 > 0.90 and acc3 > 0.90:

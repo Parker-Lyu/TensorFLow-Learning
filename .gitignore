@@ -10,3 +10,4 @@ captcha/*
 slim/*
 .idea/*
 nets/__pycache__/*
+*/__pycache__/*

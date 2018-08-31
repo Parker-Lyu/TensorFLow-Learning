@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
-# @Time    : 2018/8/14 14:16
-# @Author  : Parker
-# @File    : 10-2、3多任务验证码识别.py
-# @Software: PyCharm
-
+# !/user/bin/env python
+# -*- coding:utf-8 -*-
+# author:Parker   time: 2018/8/19
 
 import tensorflow as tf
 from PIL import Image
 from nets import nets_factory
 import numpy as np
-
 
 # 字符集
 CHAR_SET = [str(i) for i in range(10)]
@@ -17,14 +13,14 @@ CHAR_SET_LEN = len(CHAR_SET)
 # 训练集大小
 TRAIN_NUM = 5800
 # 批次大小
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 # 迭代次数
 EPOCHES = 30
 # 循环次数
 LOOP_TIMES = EPOCHES*TRAIN_NUM//BATCH_SIZE
 # tf文件
 TFRECORD_FILE = 'captcha/train.tfrecord'
-# TFRECORD_FILE_TEST = 'captcha/test.tfrecord'
+
 # 初始学习率
 LEARNING_RATE = 0.001
 
@@ -58,45 +54,50 @@ image, label0, label1, label2, label3 = read_and_decode(TFRECORD_FILE)
 image_batch, label0_batch, label1_batch, label2_batch, label3_batch = tf.train.shuffle_batch(
     [image, label0, label1, label2, label3],
     batch_size=BATCH_SIZE,
-    capacity=3000,
-    min_after_dequeue=800,
+    capacity=10000,
+    min_after_dequeue=2000,
     num_threads=1
 )
 
 
 # 定义网络结构
 train_network_fn = nets_factory.get_network_fn(
-    'alexnet_v2_captcha_multi',
+    'alexnet_v2_captcha_single',
     num_classes=CHAR_SET_LEN,
     weight_decay=0.0005,
     is_training=True
 )
 
 # 网络
-x = tf.placeholder(tf.float32,[None,224,224])
-y0 = tf.placeholder(tf.float32,[None])
-y1 = tf.placeholder(tf.float32,[None])
-y2 = tf.placeholder(tf.float32,[None])
-y3 = tf.placeholder(tf.float32,[None])
+x = tf.placeholder(tf.float32, [None,224,224])
+y0 = tf.placeholder(tf.float32, [None])
+y1 = tf.placeholder(tf.float32, [None])
+y2 = tf.placeholder(tf.float32, [None])
+y3 = tf.placeholder(tf.float32, [None])
 lr = tf.Variable(LEARNING_RATE, dtype=tf.float32)
 
 X = tf.reshape(x,[BATCH_SIZE,224,224,1])
-logits0, logits1, logits2, logits3, end_points = train_network_fn(X)
+# logits 是n*40的tensor
+logits_, end_points = train_network_fn(X)
+logits0 = tf.one_hot(indices=tf.cast(tf.slice(logits_, begin=[0,0], size=[-1,10]),tf.int32), depth=10)
+logits1 = tf.one_hot(indices=tf.cast(tf.slice(logits_, begin=[0,10], size=[-1,10]),tf.int32), depth=10)
+logits2 = tf.one_hot(indices=tf.cast(tf.slice(logits_, begin=[0,20], size=[-1,10]),tf.int32), depth=10)
+logits3 = tf.one_hot(indices=tf.cast(tf.slice(logits_, begin=[0,30], size=[-1,10]),tf.int32), depth=10)
+logits = tf.concat(axis=1, values=[logits0, logits1, logits2, logits3])
+
 
 one_hot_label0 = tf.one_hot(indices=tf.cast(y0,tf.int32), depth=CHAR_SET_LEN)
 one_hot_label1 = tf.one_hot(indices=tf.cast(y1,tf.int32), depth=CHAR_SET_LEN)
 one_hot_label2 = tf.one_hot(indices=tf.cast(y2,tf.int32), depth=CHAR_SET_LEN)
 one_hot_label3 = tf.one_hot(indices=tf.cast(y3,tf.int32), depth=CHAR_SET_LEN)
+one_hot_label = tf.concat(values=[one_hot_label0, one_hot_label1, one_hot_label2, one_hot_label3],axis=1)
 
-loss0 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label0,logits=logits0))
-loss1 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label1,logits=logits1))
-loss2 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label2,logits=logits2))
-loss3 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label3,logits=logits3))
+loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label,logits=logits))
 
-total_loss = (loss0 + loss1 + loss2 + loss3)/4.0
-optimizer = tf.train.AdamOptimizer(learning_rate=lr).minimize(total_loss)
+optimizer = tf.train.AdamOptimizer(learning_rate=lr).minimize(loss)
 
 # 计算准确率
+# logits0_ = tf.nn.softmax(logits0)
 correct_pre0 = tf.equal(tf.argmax(one_hot_label0, 1), tf.argmax(logits0, 1))
 accuracy0 = tf.reduce_mean(tf.cast(correct_pre0, tf.float32))
 
@@ -134,7 +135,7 @@ with tf.Session() as sess:
                 sess.run(tf.assign(lr,lr*0.5))
 
         if i%20 == 0:
-            acc0, acc1, acc2, acc3, loss_ = sess.run([accuracy0, accuracy1,accuracy2, accuracy3,total_loss],
+            acc0, acc1, acc2, acc3, loss_ = sess.run([accuracy0, accuracy1,accuracy2, accuracy3,loss],
                                                      feed_dict={x:b_image,
                                                                y0:b_label0,
                                                                y1:b_label1,
@@ -143,8 +144,8 @@ with tf.Session() as sess:
             learning_rate = sess.run(lr)
             print("Iter:%d/%d epoch:%d,  Loss:%.3f  Accuracy:%.2f,%.2f,%.2f,%.2f  Learning_rate:%.5f" % (
                 i, LOOP_TIMES, i_epoch, loss_, acc0, acc1, acc2, acc3, learning_rate))
-            if acc0>0.9 and acc1>0.9 and acc2>0.9 and acc3>0.9:
-                saver.save(sess,'captcha/model/crack_captcha.model',global_step=i)
+        if acc0>0.9 and acc1>0.9 and acc2>0.9 and acc3>0.9 and i==LOOP_TIMES-1:
+            saver.save(sess,'captcha/model/crack_captcha.model',global_step=i)
 
     coord.request_stop()
     coord.join(threads)
